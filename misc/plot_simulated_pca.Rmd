@@ -1,0 +1,138 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+```{r}
+library(dplyr)
+library(data.table)
+library(uwot)
+library(ggplot2)
+library(cowplot)
+
+dataPath <- '~/Documents/Genizon/Data/'
+
+sim_pca_name <- "balsac_linked_individuals_chr5-22_no_LD_100k"
+sim_pca_filename <- paste0(dataPath,"/pca/",sim_pca_name,".eigenvec")
+
+real_pca_name <- "pedigree_linked_individuals_rf2_ld"
+real_pca_filename <- paste0(dataPath,"/pca/",real_pca_name,".eigenvec")
+
+links <- fread("~/Documents/Genizon/BALSAC/balsac_id_genotype_IID.csv") %>% dplyr::rename(IID = chip_IID)
+
+```
+
+```{r}
+##convert XYZ to RGB
+XYZ_RGB <-
+  function(xyz) {
+    
+    #normalize X,Y,Z to convert to RGB
+    X <- (xyz[,1] - min(xyz[,1])) /
+      (max(xyz[,1]) - min(xyz[,1]))
+    Y <- (xyz[,2] - min(xyz[,2])) /
+      (max(xyz[,2]) - min(xyz[,2]))
+    Z <- (xyz[,3] - min(xyz[,3])) /
+      (max(xyz[,3]) - min(xyz[,3]))
+    
+    #in case there are missing values
+    X[is.na(X)] <- 0
+    Y[is.na(Y)] <- 0
+    Z[is.na(Z)] <- 0
+    
+    #convert to RGB
+    out <- rgb(unlist(X),
+               unlist(Y),
+               unlist(Z))
+    
+    return(out)
+  }
+
+project_umap <-
+  function(iid_pca_filename, a, b){
+    # column names
+    cnames <- c("FID","IID", paste0("U",1:20))
+    # load pca projections
+    iid_pca <- fread(iid_pca_filename, col.names = cnames)
+    # remove first two ID columns
+    p <- iid_pca[,-c(1,2)]
+    # Run UMAP on 20 PC's
+    umap_2D <- umap(p, n_components = 2, a = a_2D, b = b_2D)
+    # bind to PCA data
+    iid_umap_pca <- cbind(iid_pca, umap_2D) %>% 
+      dplyr::rename(UMAP1_2D = V1, UMAP2_2D = V2)
+    # return pca and umap projections
+    return(iid_umap_pca)
+    
+  }
+
+plot_projection <-
+  function(x,y,rgb="black", xlab = "x", ylab = "y") {
+    df <- tibble(x=x,y=y,rgb=rgb)
+    out <- ggplot(df, aes(x = x, y = y, color = rgb)) +
+      geom_point(size = 1) +
+      scale_colour_identity() +
+      theme_classic() +
+      labs(x = xlab, y = ylab) +
+      theme(axis.text = element_blank(),
+            axis.ticks = element_blank(),
+            axis.title = element_text(size = 10))
+    return(out)
+  }
+
+```
+
+```{r}
+# UMAP parameters for 2D plot
+a_2D <- 0.7
+b_2D <- 0.6
+#a_2D <- 9.5
+#b_2D <- 1.15
+
+real_iid_umap_pca <- 
+  project_umap(real_pca_filename, a_2D, b_2D) %>% 
+  left_join(links)
+
+real_pca1 <- plot_projection(x=real_iid_umap_pca$U1,
+                             y=-real_iid_umap_pca$U2,
+                             rgb=real_iid_umap_pca$rgb, 
+                             xlab = "real PC 1", ylab = "real PC 2")
+
+real_pca2 <- plot_projection(x=real_iid_umap_pca$U3,
+                             y=-real_iid_umap_pca$U4,
+                             rgb=real_iid_umap_pca$rgb, 
+                             xlab = "real PC 3", ylab = "real PC 4")
+
+real_umap <- plot_projection(x=real_iid_umap_pca$UMAP1_2D,
+                             y=real_iid_umap_pca$UMAP2_2D,
+                             rgb=real_iid_umap_pca$rgb, 
+                             xlab = "real UMAP 1", ylab = "real UMAP 2")
+
+real_genotypes <- plot_grid(real_umap, plot_grid(real_pca1,  real_pca2), ncol = 1)
+
+sim_iid_umap_pca <- project_umap(sim_pca_filename, a_2D, b_2D) %>%
+  dplyr::rename(ind = IID) %>%
+  left_join(links)
+
+sim_pca1 <- plot_projection(x=sim_iid_umap_pca$U1,
+                             y=-sim_iid_umap_pca$U2,
+                             rgb=sim_iid_umap_pca$rgb, 
+                             xlab = "sim PC 1", ylab = "sim PC 2")
+
+sim_pca2 <- plot_projection(x=sim_iid_umap_pca$U3,
+                             y=-sim_iid_umap_pca$U4,
+                             rgb=sim_iid_umap_pca$rgb, 
+                             xlab = "sim PC 3", ylab = "sim PC 4")
+
+sim_umap <- plot_projection(x=sim_iid_umap_pca$UMAP1_2D,
+                             y=sim_iid_umap_pca$UMAP2_2D,
+                             rgb=sim_iid_umap_pca$rgb, 
+                             xlab = "sim UMAP 1", ylab = "sim UMAP 2")
+
+simulated_genotypes <- plot_grid(sim_umap, plot_grid(sim_pca1,  sim_pca2), ncol = 1)
+
+plot_grid(real_genotypes, simulated_genotypes)
+
+#linked_projections <- inner_join(real_iid_umap_pca, sim_iid_umap_pca, by = c("ind","rgb"), suffix = c(".real",".sim"))
+```

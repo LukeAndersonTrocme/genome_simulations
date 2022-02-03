@@ -1,0 +1,54 @@
+---
+title: "make umap plot from pca"
+output: html_notebook
+---
+# load libraries
+```{r}
+library(dplyr)
+library(data.table)
+library(ggplot2)
+library(uwot)
+```
+# define function
+```{r}
+project_umap <-
+  function(iid_pca_filename, a, b, n_dim){
+    # column names
+    cnames <- c("FID","IID", paste0("U",1:n_dim))
+    # load pca projections
+    iid_pca <- data.table::fread(iid_pca_filename, col.names = cnames)
+    # remove first two ID columns
+    p <- iid_pca[,-c(1,2)]
+    # Run a 2D UMAP on n_dim PC's
+    umap_2D <- uwot::umap(p, n_components = 2, a = a_2D, b = b_2D)
+    # bind to PCA data
+    iid_umap_pca <- cbind(iid_pca, umap_2D) %>% 
+      dplyr::rename(UMAP1_2D = V1, UMAP2_2D = V2)
+    # return pca and umap projections
+    return(iid_umap_pca)
+  }
+```
+# run umap
+```{r}
+# assuming first two columns are FID IID
+pca_filename <- "~/path/to/pca.txt"
+n_dim <- 20 # number of pcs
+
+# UMAP parameters for 2D plot
+# more on a and b parameters:
+# https://jlmelville.github.io/uwot/abparams.html
+a <- 0.7
+b <- 0.6
+
+# run umap using the pca 
+umap_projections <- project_umap(pca_filename, a, b, n_dim)
+```
+# plot results
+```{r}
+umap_plot <- 
+  ggplot(umap_projections, 
+         aes(x = UMAP1_2D, y = UMAP2_2D)) +
+  geom_point()
+
+ggsave(umap_plot, filename = "~/path/to/plot.jpg")
+```
