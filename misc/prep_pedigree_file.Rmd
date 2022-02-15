@@ -22,7 +22,7 @@ output:
 # load libraries
 library(dplyr)
 #library(tidyverse)
-source("/Users/luke/Documents/msprime_genealogy_test/misc/pedigree_tools.R")
+source("/Users/luke/Documents/genome_simulations/misc/pedigree_tools.R")
 ```
 
 # load files
@@ -31,9 +31,13 @@ source("/Users/luke/Documents/msprime_genealogy_test/misc/pedigree_tools.R")
 genotype_iid <- readRDS("~/Documents/Genizon/Data/RDS/iid_projections_presumed_fc.RDS") %>% dplyr::select(IID, rgb)
 # balsac pedigree with ego_genizon and ego_cag as link IDs
 balsac_pedigree <- data.table::fread("/Users/luke/Documents/Genizon/BALSAC/Balsac_aout_2021_v2/tout_balsac.csv") %>% mutate(ego_genizon = as.character(ego_genizon))
+pedigree <- balsac_pedigree %>% dplyr::select(ind, mother, father)
 # conversion key for cag and balsac
 cag_balsac_key <- data.table::fread("/Users/luke/Documents/Genizon/BALSAC/data_Gravel936028_PROJECT_CODE_file111.csv") %>%
   dplyr::rename(ego_cag = PROJECT_CODE) %>% mutate(IID = as.character(file111))
+
+# king_cutoff
+king_cag <- fread("~/Documents/Genizon/Data/pca/4882_linked_IIDs_ld_king.king.cutoff.out.id")
 ```
 
 # link genotyped individuals to pedigree
@@ -51,197 +55,114 @@ genizon_linked <-
   dplyr::select(ind, father, mother, IID, ego_genizon, rgb) %>%
   filter(!ind %in% cag_linked$ind) # one double linked individual
 
-all_linked <- bind_rows(cag_linked, genizon_linked)
+all_linked <- bind_rows(cag_linked, genizon_linked) %>% 
+  # EXCLUDE CRYPTIC RELATIVES
+  filter(!IID %in% king_cag$IID)
+
+list_of_probands <- all_linked %>% distinct(ind) %>% pull(ind)
+```
+
+# identify sibs
+```{r}
+
+extended_families <- get_extended_family(pedigree, list_of_probands)
+# count number of missing ancestors
+extended_families$n_in <- rowSums( !is.na( extended_families [,2:7]))
+# keep track of individuals who are missing grand-parents
+too_shallow <- extended_families %>% filter(n_in<6) %>% pull(ind)
+
+# pivot table
+all_ancestors <-
+  extended_families %>% dplyr::select(-n_in) %>%
+  pivot_longer(!ind) %>%
+  dplyr::rename(ancestor = value, relation = name) %>%
+  mutate(relation = gsub(".x|.y|.mom|.dad","",relation)) %>%
+  filter(!is.na(ancestor))
+
+# ancestors that occur more than once will identify related probands
+common_ancestors<-
+  all_ancestors %>%
+  group_by(ancestor) %>%
+  tally() %>% filter(n > 2) %>% ungroup() %>%
+  left_join(all_ancestors, by = "ancestor")
+
+# keep one proband per family
+one_per_family <-
+  common_ancestors %>%
+  # arrange by ind to ensure we always keep the same ind
+  arrange(ind) %>%
+  group_by(ancestor) %>%
+  slice(1)
+
+# assert we actually have unrelated individuals
+confirm_unrelated <- 
+  one_per_family %>%
+  group_by(ancestor) %>%
+  tally() %>% ungroup() %>% distinct(n)
+confirm_unrelated$n == 1
+
+# this is a list of individuals to REMOVE
+related_probands <-
+  common_ancestors %>%
+  distinct(ind) %>%
+  # so we KEEP one per family
+  filter(!ind %in% one_per_family$ind) %>%
+  pull(ind)
+
+probands_to_climb <-
+  all_linked %>%
+  filter(!ind %in% related_probands,
+         !ind %in% too_shallow) %>%
+  distinct(ind) %>%
+  pull(ind)
+  
+length(probands_to_climb)
+length(list_of_probands)
+length(too_shallow)
+length(related_probands)
+length(one_per_family$ind)
 ```
 
 # generate ascending pedigree with generation time
 ```{r}
-pedigree <- balsac_pedigree %>% dplyr::select(ind, mother, father)
+all_linked %>% filter(ind %in% probands_to_climb) %>% distinct(IID) %>% 
+  data.table::fwrite(file = "~/Documents/Genizon/Data/4846_linked_IIDs.txt", col.names = F)
 
-list_of_probands <- all_linked %>% distinct(ind) %>% pull(ind)
+all_linked %>% filter(ind %in% probands_to_climb) %>% distinct(ind) %>% 
+  data.table::fwrite(file = "~/Documents/Genizon/Data/4846_linked_inds.txt", col.names = F)
 
-all_linked %>% distinct(IID) %>% 
-  data.table::fwrite(file = "~/Documents/Genizon/Data/5402_linked_IIDs.txt", col.names = F)
-
-ascending_pedigree <- maximum_genealogical_depth(pedigree, list_of_probands) %>%
+ascending_pedigree <- maximum_genealogical_depth(pedigree, probands_to_climb) %>%
   left_join(pedigree, by = "ind")
 
-ascending_pedigree %>% arrange(-generation)
-
 data.table::fwrite(ascending_pedigree %>% dplyr::select(ind, mother, father, generation), 
-                   file = "~/Documents/Genizon/Data/ascending_pedigree.txt")
-
-list_of_proband_IIDs
+                   file = "~/Documents/Genizon/Data/4846_unrelated_ascending_pedigree.txt")
 ```
-
-# run genome simulations on the compute canada narval cluster
-```{bash}
-# Note that in array_job_genome_sim.sh we have to set some variable to run the right simulation
-pth=$"/home/<username>/path/to/pedigree/"
-chromosome="$SLURM_ARRAY_TASK_ID"
-pedigree_name="ascending_pedigree"
-mutation_rate="2.36e-8"
-suffix="default"
-
-# then we run an array job to simulate chromsomes
-sbatch array_job_genome_sim.sh
-
-# then in an interactive node I run this to concatenate chromosomes
-bash concat_and_pca.sh
-
-```
-
+# permuted
 ```{r}
-sim_pca_filename <- paste0("~/Documents/Genizon/Data/pca/pcs_ascending_pedigree_2.36e-8_5402probands_allchr_ld.txt")
-real_pca_filename <- paste0("~/Documents/Genizon/Data/pca/pcs_5402_linked_IIDs.txt")
+permute1<-fread("/Users/luke/Documents/simulate_real_pedigrees/data/permute_1.csv") %>% dplyr::select(ind, mother, father)
+permute1_extended_families <- get_extended_family(permute1, list_of_probands)
+# count number of missing ancestors
+permute1_extended_families$n_in <- rowSums( !is.na( permute1_extended_families [,2:15]))
+# keep track of individuals who are missing grandparents
+probands_to_climb_p1 <- permute1_extended_families %>% filter(n_in>=12) %>% pull(ind)
 
-# UMAP parameters for 2D plot
-a_2D <- 0.7
-b_2D <- 0.6
+ascending_pedigree_permute1 <- maximum_genealogical_depth(permute1, probands_to_climb_p1) %>%
+  left_join(permute1, by = "ind")
 
-sim_iid_umap_pca <- project_umap(sim_pca_filename, a_2D, b_2D, 50) %>%
-  dplyr::rename(ind = IID) %>%
-  left_join(all_linked, by = "ind")
-
-real_iid_umap_pca <- project_umap(real_pca_filename, a_2D, b_2D, 50) %>%
-  mutate(IID = as.character(IID)) %>%
-  left_join(all_linked, by = "IID")
-
-melted_sim <- 
-  sim_iid_umap_pca %>%
-  dplyr::select(-FID, -father, -mother, -ego_cag, -ego_genizon) %>%
-  pivot_longer(!c(ind, IID, rgb))
-
-melted_real <- 
-  real_iid_umap_pca %>%
-  dplyr::select(-FID, -father, -mother, -ego_cag, -ego_genizon) %>%
-  pivot_longer(!c(ind, IID, rgb))
-
-combined <- inner_join(melted_sim, melted_real, by = c("ind", "IID", "rgb", "name"), suffix = c("_sim", "_real"))
+data.table::fwrite(ascending_pedigree_permute1 %>% dplyr::select(ind, mother, father, generation), 
+                   file = "~/Documents/Genizon/Data/4882_permute1.txt")
 
 
-```
-```{r}
-#not the most efficient code, but written for clarity to make sure we're calculating the right thing
-
-heat <- data.frame()
-for(real_pc in unique(melted_real$name)) { #for each PC
-  #get real pc vector
-  real_vect <- melted_real[which(melted_real$name == real_pc),]$value
-  
-  for(sim_pc in unique(melted_sim$name)) { #for each PC
-    #get simulated pc vector
-    sim_vect <- melted_sim[which(melted_sim$name == sim_pc),]$value
-    #multiply both vectors
-    #dot <- abs(sum(real_vect * sim_vect))
-    dot <- sum(real_vect * sim_vect)^2
-    #append to output
-    out <- data.frame("real" = real_pc, 
-                      "sim" = sim_pc,
-                      "dot" = dot)
-    heat <- rbind(heat, out)
-  }
-}
-  
-heat$real <- as.numeric(gsub("PC_", "", heat$real))
-heat$sim <- as.numeric(gsub("PC_", "", heat$sim))
-```
-
-```{r}
-h<-
-ggplot(heat,
-       aes(x = real,
-           y = sim,
-           fill = dot)) +
-  geom_tile() +
-  geom_text(data = heat %>% filter(dot >= 0.001) %>% 
-              mutate(ff =  ifelse(dot > 0.05,
-                     "bold", "plain"),
-                     fc =  ifelse(dot > 0.05,
-                     "white", "black")),
-           aes(label = round(dot,3),
-               fontface = ff,
-               color = fc),
-           size = 3) +
-  scale_x_continuous(breaks = seq(1,10,1))+
-  scale_y_continuous(breaks = seq(1,10,1))+
-  scale_fill_gradient(low = "white",
-                      high = "black") +
-  guides(fill = F) +
-  scale_color_identity()+
-  labs(x = "Real PC",
-       y = "Simulated PC") +
-  ggtitle("R Squared")
-
-h
-```
+permute2<-fread("/Users/luke/Documents/Genizon/Data/demo_params/permute_2.csv") %>% dplyr::select(ind, mother, father)
 
 
-```{r}
-sim_pca1 <- plot_projection(x=sim_iid_umap_pca$U1,
-                             y=-sim_iid_umap_pca$U2,
-                             rgb=sim_iid_umap_pca$rgb, 
-                             xlab = "sim PC 1", ylab = "sim PC 2")
-
-sim_pca2 <- plot_projection(x=sim_iid_umap_pca$U2,
-                             y=-sim_iid_umap_pca$U4,
-                             rgb=sim_iid_umap_pca$rgb, 
-                             xlab = "sim PC 2", ylab = "sim PC 4")
-
-sim_pca2 <- plot_projection(x=sim_iid_umap_pca$U3,
-                             y=-sim_iid_umap_pca$U4,
-                             rgb=sim_iid_umap_pca$rgb, 
-                             xlab = "sim PC 3", ylab = "sim PC 4")
-
-sim_pca3 <- plot_projection(x=sim_iid_umap_pca$U5,
-                             y=-sim_iid_umap_pca$U6,
-                             rgb=sim_iid_umap_pca$rgb, 
-                             xlab = "sim PC 5", ylab = "sim PC 6")
-
-sim_pca4 <- plot_projection(x=sim_iid_umap_pca$U7,
-                             y=-sim_iid_umap_pca$U8,
-                             rgb=sim_iid_umap_pca$rgb, 
-                             xlab = "sim PC 7", ylab = "sim PC 8")
-
-sim_umap <- plot_projection(x=sim_iid_umap_pca$UMAP1_2D,
-                             y=sim_iid_umap_pca$UMAP2_2D,
-                             rgb=sim_iid_umap_pca$rgb, 
-                             xlab = "sim UMAP 1", ylab = "sim UMAP 2")
-
-simulated_genotypes <- plot_grid(sim_umap, plot_grid(sim_pca1,  sim_pca2, sim_pca3,  sim_pca4), ncol = 1)
 
 
-real_pca1 <- plot_projection(x=real_iid_umap_pca$U1,
-                             y=-real_iid_umap_pca$U2,
-                             rgb=real_iid_umap_pca$rgb, 
-                             xlab = "real PC 1", ylab = "real PC 2")
 
-real_pca2 <- plot_projection(x=real_iid_umap_pca$U2,
-                             y=-real_iid_umap_pca$U4,
-                             rgb=real_iid_umap_pca$rgb, 
-                             xlab = "real PC 2", ylab = "real PC 4")
 
-real_pca2 <- plot_projection(x=real_iid_umap_pca$U3,
-                             y=-real_iid_umap_pca$U4,
-                             rgb=real_iid_umap_pca$rgb, 
-                             xlab = "real PC 3", ylab = "real PC 4")
+ascending_pedigree_permute2 <- maximum_genealogical_depth(permute2, probands_to_climb) %>%
+  left_join(permute2, by = "ind")
 
-real_pca3 <- plot_projection(x=real_iid_umap_pca$U5,
-                             y=-real_iid_umap_pca$U6,
-                             rgb=real_iid_umap_pca$rgb, 
-                             xlab = "real PC 5", ylab = "real PC 6")
-
-real_pca4 <- plot_projection(x=real_iid_umap_pca$U7,
-                             y=-real_iid_umap_pca$U8,
-                             rgb=real_iid_umap_pca$rgb, 
-                             xlab = "real PC 7", ylab = "real PC 8")
-
-real_umap <- plot_projection(x=real_iid_umap_pca$UMAP1_2D,
-                             y=real_iid_umap_pca$UMAP2_2D,
-                             rgb=real_iid_umap_pca$rgb, 
-                             xlab = "real UMAP 1", ylab = "real UMAP 2")
-
-real_genotypes <- plot_grid(real_umap, plot_grid(real_pca1,  real_pca2, real_pca3,  real_pca4), ncol = 1)
-
-plot_grid(simulated_genotypes, real_genotypes, nrow = 1)
+data.table::fwrite(ascending_pedigree_permute2 %>% dplyr::select(ind, mother, father, generation), 
+                   file = "~/Documents/Genizon/Data/4882_permute2.txt")
 ```

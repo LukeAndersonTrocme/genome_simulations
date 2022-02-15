@@ -54,6 +54,51 @@ maximum_genealogical_depth <- function(pedigree, list_of_probands) {
   return(out)
 }
 
+
+# Get the deepest generation for each internal node
+maximum_genealogical_depth_k <- function(pedigree, list_of_probands, k) {
+  # probands are individuals at generation 0
+  individuals <- data.frame(ind = list_of_probands, generation = 0)
+  # initialize output to append to downstream
+  gen_depth <- individuals     
+  # for loop to iterate through generations
+  for(k in 1:k) {             
+    
+    individuals_parents <- 
+      # start from the entire pedigree
+      pedigree %>%
+      # keep parents of individuals at generation 'k'
+      filter(ind %in% individuals$ind) %>%
+      # if parent is missing, flag individual as founder
+      mutate(founder = case_when(is.na(father) | is.na(mother) ~ T,
+                                 father == 0 | mother == 0 ~ T, 
+                                 TRUE ~ F))
+    
+    # stop climbing when there are only founders left
+    if(nrow(filter(individuals_parents, founder == F)) == 0){break}
+    
+    # to ascend genealogy, parents become reference individuals
+    mothers <- unique(individuals_parents$mother)
+    fathers <- unique(individuals_parents$father)
+    # recursion step reassigns reference individuals
+    individuals <- 
+      data.frame(ind = c(mothers, fathers), generation = k) %>%
+      filter(!is.na(ind)) # removes missing IDs
+    
+    # output max depth per individual
+    gen_depth <- 
+      # individuals already visited by climbing algorithm
+      gen_depth %>%
+      # remove duplicate individuals at 'k-1'
+      filter(!ind %in% individuals$ind) %>%
+      # append updated individuals 'k' generations deep
+      bind_rows(individuals)                                                
+  }
+  # do not include founder-0 as individual
+  out <- gen_depth %>% filter(ind != 0)
+  return(out)
+}
+
 # Sum of kinships of ancestors to a list of probands
 estimated_genetic_contribution <- function(pedigree, list_of_probands) {
   # probands are individuals at generation 0
@@ -341,6 +386,45 @@ find_concestors <- function(pedigree, ID1, ID2) {
     return(concestor_table)
   }
 }
+
+
+get_extended_family <- function(pedigree, list_of_probands){
+  # we identify probands who are related by identifying ancestors in common
+  # first pull the list of probands
+  gen0 <- pedigree %>% filter(ind %in% list_of_probands)
+  # climb up the maternal side of the genealogy
+  mothers <- pedigree %>% filter(ind %in% gen0$mother) %>%
+    dplyr::rename(grand_mother=mother, grand_father=father, mother=ind)
+  # climb up the fathers paternal side of the genealogy
+  fathers <- pedigree %>% filter(ind %in% gen0$father) %>% 
+    dplyr::rename(grand_father=father, grand_mother=mother, father=ind)
+  
+  # climb up the mothers maternal side of the genealogy
+  mothersmother <- pedigree %>% filter(ind %in% mothers$grand_mother) %>% 
+    dplyr::rename(great_grand_mother.mom=mother, great_grand_father.mom=father, grand_mother.mom=ind)
+  # climb up the fathers maternal side of the genealogy
+  fathersmother <- pedigree %>% filter(ind %in% fathers$grand_mother) %>% 
+    dplyr::rename(great_grand_mother.dad=mother, great_grand_father.dad=father, grand_mother.dad=ind)
+  
+  # climb up the mothers paternal side of the genealogy
+  mothersfather <- pedigree %>% filter(ind %in% mothers$grand_father) %>% 
+    dplyr::rename(great_grand_mother.mom=mother, great_grand_father.mom=father, grand_father.mom=ind)
+  # climb up the fathers paternal side of the genealogy
+  fathersfather <- pedigree %>% filter(ind %in% fathers$grand_father) %>% 
+    dplyr::rename(great_grand_mother.dad=mother, great_grand_father.dad=father, grand_father.dad=ind)
+  
+  extended_families <- 
+    gen0 %>% 
+    left_join(mothers, by = "mother") %>% 
+    left_join(fathers, by = "father", suffix=c(".mom",".dad")) %>% 
+    left_join(mothersmother, by = "grand_mother.mom") %>% 
+    left_join(mothersfather, by = "grand_father.mom") %>% 
+    left_join(fathersmother, by = "grand_mother.dad") %>% 
+    left_join(fathersfather, by = "grand_father.dad")
+  
+  return(extended_families)
+}
+
 
 
 project_umap <-

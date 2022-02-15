@@ -1,0 +1,56 @@
+---
+title: "Prepare sample pedigree for genome simulations"
+author:
+- name: Luke Anderson-Trocmé,
+  affiliation:
+  - &cruk Department of Human Genetics, McGill University,  Montreal, Canada
+date: '`r format(Sys.Date(), "%Y-%B-%d")`'
+output:
+  html_notebook:
+    df_print: paged
+    code_folding: show
+    toc: yes
+    toc_float:
+      collapsed: false
+      smooth_scroll: false
+---
+
+```{r}
+# clear global environment
+#rm(list=ls())
+
+# load libraries
+library(dplyr)
+#library(tidyverse)
+source("~/Documents/genome_simulations/misc/pedigree_tools.R")
+```
+
+# load file
+```{r}
+sample_pedigree <- data.table::fread("~/Documents/genome_simulations/code/sample_pedigree.csv") %>% dplyr::select(ind, mother, father)
+tail(sample_pedigree, 20)
+```
+
+# identify list of probands
+```{r}
+list_of_sample_probands <- 
+  sample_pedigree %>% 
+  filter(!ind %in% c(sample_pedigree$mother, 
+                     sample_pedigree$father),
+         !is.na(mother), !is.na(father)) %>%
+  pull(ind)
+
+list_of_sample_probands
+```
+
+# generate ascending pedigree with generation time
+```{r}
+ascending_sample_pedigree <- maximum_genealogical_depth(sample_pedigree, list_of_sample_probands) %>%
+  left_join(pedigree, by = "ind")
+
+ascending_sample_pedigree %>% filter(!is.na(mother), !is.na(father))
+
+data.table::fwrite(ascending_pedigree %>% dplyr::select(ind, mother, father, generation), 
+                   file = "~/Documents/genome_simulations/code/ascending_sample_pedigree.txt")
+```
+

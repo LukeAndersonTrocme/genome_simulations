@@ -8,9 +8,9 @@
 # scheduling all jobs related to genome simulations
 
 time_stamp=$(date +"%F_%H:%M")
-dir="/home/luke1111/projects/def-sgravel/luke1111/simulated_genomes/"
+dir="/home/luke1111/projects/ctb-sgravel/luke1111/simulated_genomes/"
 p="${dir}/code"
-ped_name="ascending_pedigree"
+ped_name="public_ascending_pedigree_1890-1920_2k_cap"
 suffix="sim"
 
 path=${dir}${ped_name}_${suffix}_${time_stamp}
@@ -52,9 +52,9 @@ J4=$(sbatch --dependency=afterok:$J3 --parsable \
      $ped_name $suffix)
 
 # input: plink file of 22 concatentated chromosomes
-# output: pruned plink file
+# output: pruned plink file (linkage disequilibrium and relatedness)
 sbatch --dependency=afterok:$J4 \
 $p/5_ld_prune.sh \
 $dir/maps/20140520.strict_mask.autosomes.bed \
 $plink_path/${ped_name}_${suffix} \
-1000 100 0.1
+1000 100 0.05 0.0884

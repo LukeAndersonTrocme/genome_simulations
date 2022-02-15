@@ -13,46 +13,38 @@ library(cowplot)
 
 dataPath <- '~/Documents/Genizon/Data/'
 
-sim_pca_name <- "balsac_linked_individuals_chr5-22_no_LD_100k"
+sim_pca_name <- "debug_og_balsac_pedigree_ld_100"
 sim_pca_filename <- paste0(dataPath,"/pca/",sim_pca_name,".eigenvec")
 
-real_pca_name <- "pedigree_linked_individuals_rf2_ld"
+real_pca_name <- "80_debug_balsac_real_ld_100"
 real_pca_filename <- paste0(dataPath,"/pca/",real_pca_name,".eigenvec")
 
 links <- fread("~/Documents/Genizon/BALSAC/balsac_id_genotype_IID.csv") %>% dplyr::rename(IID = chip_IID)
+locations <-readRDS("~/Documents/Genizon/Data/RDS/watershed_locations.RDS")
+pedigree <- fread("~/Documents/Genizon/BALSAC/tout_balsac_sept2020.txt")
 
 ```
 
 ```{r}
-##convert XYZ to RGB
-XYZ_RGB <-
-  function(xyz) {
-    
-    #normalize X,Y,Z to convert to RGB
-    X <- (xyz[,1] - min(xyz[,1])) /
-      (max(xyz[,1]) - min(xyz[,1]))
-    Y <- (xyz[,2] - min(xyz[,2])) /
-      (max(xyz[,2]) - min(xyz[,2]))
-    Z <- (xyz[,3] - min(xyz[,3])) /
-      (max(xyz[,3]) - min(xyz[,3]))
-    
-    #in case there are missing values
-    X[is.na(X)] <- 0
-    Y[is.na(Y)] <- 0
-    Z[is.na(Z)] <- 0
-    
-    #convert to RGB
-    out <- rgb(unlist(X),
-               unlist(Y),
-               unlist(Z))
-    
-    return(out)
-  }
+subset <- inner_join(pedigree, links, by = "ind") %>%
+  left_join(locations, by = "lieump") %>%
+  arrange(a, min_wts_name, t) %>%
+  filter(t %in% c("St Georges De Beauce", 
+                    "Beauport", 
+                    "Normandin", "Albanel",
+                    "Matane", "St Damase De Matane", "St Luc De Matane", "Padoue")) %>%
+  group_by(a) %>% sample_n(size = 20) %>% ungroup() %>%
+  dplyr::select(ind, IID, min_wts_name, t)
 
+
+write.csv(subset, "~/Documents/Genizon/Data/80_debug_balsac.csv", quote = F, row.names = F)
+```
+
+```{r}
 project_umap <-
   function(iid_pca_filename, a, b){
     # column names
-    cnames <- c("FID","IID", paste0("U",1:20))
+    cnames <- c("FID","IID", paste0("U",1:n_dim))
     # load pca projections
     iid_pca <- fread(iid_pca_filename, col.names = cnames)
     # remove first two ID columns
@@ -135,4 +127,89 @@ simulated_genotypes <- plot_grid(sim_umap, plot_grid(sim_pca1,  sim_pca2), ncol 
 plot_grid(real_genotypes, simulated_genotypes)
 
 #linked_projections <- inner_join(real_iid_umap_pca, sim_iid_umap_pca, by = c("ind","rgb"), suffix = c(".real",".sim"))
+```
+
+```{r}
+real_pca <- 
+  fread(paste0(dataPath, 
+               "/clean_Genizon/2405_no_hla_ld.eigenvec"))
+names(real_pca)[c(1,2)] <- c('FID','no_asc')
+names(real_pca)[-c(1,2)] <- paste0(rep("PC"), "_",1:100)
+
+real_pca <- 
+  inner_join(Key, real_pca, by = c("no_asc")) %>%
+  dplyr::select(-FID) %>%
+  melt(. , id.vars = c("ind", "no_asc")) %>%
+  dplyr::rename(genizon = "no_asc",
+                balsac = "ind")
+real_pca
+
+#Merge to get same individuals
+real_sim_pca <-
+  inner_join(real_pca, sim_pca, by = c("genizon","balsac","variable")) %>%
+  dplyr::rename(real = value.x,
+         simulated = value.y) %>%
+  filter(variable %in% pickPC)
+
+real_sim_pca
+
+##this split is a little awkward but deals with an issue of duplicated ID in Genizon
+real_pca <- real_sim_pca %>% dplyr::select(-simulated)
+sim_pca <- real_sim_pca %>% dplyr::select(-real)
+real_pca
+sim_pca
+
+
+#not the most efficient code, but written for clarity to make sure we're calculating the right thing
+
+heat <- data.frame()
+for(real_pc in unique(real_pca$variable)) { #for each PC
+  #get real pc vector
+  real_vect <- real_pca[which(real_pca$variable == real_pc),]$real
+  
+  for(sim_pc in unique(sim_pca$variable)) { #for each PC
+    #get simulated pc vector
+    sim_vect <- sim_pca[which(sim_pca$variable == sim_pc),]$simulated
+    #multiply both vectors
+    #dot <- abs(sum(real_vect * sim_vect))
+    dot <- sum(real_vect * sim_vect)^2
+    #append to output
+    out <- data.frame("real" = real_pc, 
+                      "sim" = sim_pc,
+                      "dot" = dot)
+    heat <- rbind(heat, out)
+  }
+}
+  
+heat$real <- as.numeric(gsub("PC_", "", heat$real))
+heat$sim <- as.numeric(gsub("PC_", "", heat$sim))
+```
+
+```{r}
+h<-
+ggplot(heat,
+       aes(x = real,
+           y = sim,
+           fill = dot)) +
+  geom_tile() +
+  geom_text(data = heat %>% filter(dot >= 0.001) %>% 
+              mutate(ff =  ifelse(dot > 0.05,
+                     "bold", "plain"),
+                     fc =  ifelse(dot > 0.05,
+                     "white", "black")),
+           aes(label = round(dot,3),
+               fontface = ff,
+               color = fc),
+           size = 3) +
+  scale_x_continuous(breaks = seq(1,10,1))+
+  scale_y_continuous(breaks = seq(1,10,1))+
+  scale_fill_gradient(low = "white",
+                      high = "black") +
+  guides(fill = F) +
+  scale_color_identity()+
+  labs(x = "Real PC",
+       y = "Simulated PC") +
+  ggtitle("R Squared")
+
+h
 ```
