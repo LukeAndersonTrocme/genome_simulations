@@ -23,9 +23,9 @@ To run these genome simulations on a compute cluster, we use a series of shell s
 
 [`3_bcf_to_plink.sh`](https://github.com/sgravel/msprime_genealogy_test/blob/main/code/3_bcf_to_plink.sh) converts bcf file to a plink file
 
-[`4_concatenate_chromosomes.sh`](https://github.com/sgravel/msprime_genealogy_test/blob/main/code/4_concatenate_chromosomes.sh) concatenates all chromosomes 
+[`4_ld_prune.sh`](https://github.com/sgravel/msprime_genealogy_test/blob/main/code/4_ld_prune.sh) prunes with linkage disequilibrium and strict [mask](http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/accessible_genome_masks/20140520.strict_mask.autosomes.bed)
 
-[`5_ld_prune.sh`](https://github.com/sgravel/msprime_genealogy_test/blob/main/code/5_ld_prune.sh) prunes with linkage disequilibrium and strict [mask](http://ftp.1000genomes.ebi.ac.uk/vol1/ftp/release/20130502/supporting/accessible_genome_masks/20140520.strict_mask.autosomes.bed)
+[`5_concatenate_chromosomes.sh`](https://github.com/sgravel/msprime_genealogy_test/blob/main/code/5_concatenate_chromosomes.sh) concatenates all chromosomes 
 
 _note: for principal component analysis we use [flashpca2](https://github.com/gabraham/flashpca)._
 
