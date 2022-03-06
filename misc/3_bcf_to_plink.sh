@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --account=ctb-sgravel
 #SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=8GB
-#SBATCH --time=06:00:00
+#SBATCH --mem-per-cpu=128GB
+#SBATCH --time=12:00:00
 #SBATCH --array=1-22
 #SBATCH --output=log/%x-%A_%a.out
 #SBATCH --mail-user=luke.anderson.trocme@gmail.com
@@ -24,12 +24,12 @@ temp_file=$SLURM_TMPDIR/${file_name}
 echo "Job started at: `date`"
 
 # make file to explicitly rename chromosome
-echo "1 chr${chromosome}" > ${temp_file}_chromosme.txt
+#echo "1 chr${chromosome}" > ${temp_file}_chromosme.txt
 
 # rename the chromosome
-bcftools annotate --rename-chrs ${temp_file}_chromosme.txt \
-$bcf_path/${file_name}.bcf \
--Ov -o ${temp_file}.vcf
+#bcftools annotate --rename-chrs ${temp_file}_chromosme.txt \
+#$bcf_path/${file_name}.bcf \
+#-Ov -o ${temp_file}.vcf
 
 # make a bed/bim/fam file
 srun plink2 \

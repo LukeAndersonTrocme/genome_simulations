@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --account=ctb-sgravel
 #SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=16GB
-#SBATCH --time=03:00:00
+#SBATCH --mem-per-cpu=64GB
+#SBATCH --time=09:00:00
 #SBATCH --output=log/%x-%j.out
 #SBATCH --mail-user=luke.anderson.trocme@gmail.com
 #SBATCH --mail-type=FAIL
@@ -25,3 +25,4 @@ ls $plink_path/${prefix}_*_${suffix}.bed | sed 's/.bed//g' > merge.txt
 srun plink --merge-list merge.txt --make-bed --out $out
 
 echo "Job finished with exit code $? at: `date`"
+sb

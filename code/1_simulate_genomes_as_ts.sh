@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=ctb-sgravel
 #SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=4GB
+#SBATCH --mem-per-cpu=32GB
 #SBATCH --time=12:00:00
 #SBATCH --array=1-22
 #SBATCH --output=log/%x-%A_%a.out
@@ -24,6 +24,7 @@ srun python $dir/code/run_genome_sim.py \
 -d $dir \
 -o $ts_path \
 -p $pedigree_name \
--chr $SLURM_ARRAY_TASK_ID
+-chr $SLURM_ARRAY_TASK_ID \
+-censor "False"
 
 echo "Job finished with exit code $? at: `date`"

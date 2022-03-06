@@ -1,19 +1,21 @@
 #!/bin/bash
 #SBATCH --account=ctb-sgravel
-#SBATCH --cpus-per-task=1
+#SBATCH --cpus-per-task=2
 #SBATCH --mem-per-cpu=1GB
-#SBATCH --time=72:00:00
+#SBATCH --array=1-10
+#SBATCH --time=00:50:00
 #SBATCH --output=log/%x-%j.out
 
 # scheduling all jobs related to genome simulations
 
-time_stamp=$(date +"%F_%H-%M")
-dir="/home/luke1111/projects/ctb-sgravel/luke1111/simulated_genomes/"
+time_stamp=$(date +"%F_%H:%M")
+dir="$HOME/projects/ctb-sgravel/shared_projects/simulation_p_value/simulated_genomes/"
 p="${dir}/code"
-ped_name="total_ascending_pedigree"
+ped_name="lac_saint_jean_ascending_pedigree"
 suffix="sim"
+random_seed=$SLURM_ARRAY_TASK_ID
 
-path=${dir}${ped_name}_${suffix}_${time_stamp}
+path=${dir}${ped_name}_${suffix}_replicate_${SLURM_ARRAY_TASK_ID}_${time_stamp}
 ts_path=$path/tree_sequences
 bcf_path=$path/bcf_files
 plink_path=$path/plink_files
@@ -31,7 +33,7 @@ cd $path
 J1=$(sbatch --parsable \
     $p/1_simulate_genomes_as_ts.sh \
     $dir $ts_path \
-    $ped_name $suffix)
+    $ped_name $suffix -seed $random_seed)
 
 # input: tree sequences of 22 separate chromosomes
 # output: bcf files of 22 separate chromosomes
@@ -46,9 +48,3 @@ J3=$(sbatch --dependency=afterok:$J2 --parsable \
      $p/3_bcf_to_pruned_plink.sh \
      $bcf_path $plink_path \
      $ped_name $suffix)
-
-# input: pruned plink files of 22 separate chromosomes
-# output: plink file of 22 concatentated chromosomes
-sbatch --dependency=afterok:$J3 \
-$p/4_concatenate_chromosomes.sh \
-$plink_path $ped_name ${suffix}_ld

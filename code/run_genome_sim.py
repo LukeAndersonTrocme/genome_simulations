@@ -18,26 +18,33 @@ def main(args):
     yaml_file = '{}/code/Tennessen_ooa_2T12.yaml'.format(args.dir)
     graph = demes.load(yaml_file)
     ooa_2T12 = msprime.Demography.from_demes(graph)
-
     # define recombination map file name from stdpopsim
     map_file_name = '{}/maps/genetic_map_GRCh37_chr{}.txt'.format(args.dir, args.chromosome)
     map = msprime.intervals.RateMap.read_hapmap(map_file_name)
+    # identify centromere
+    centromeres=pd.read_csv('{}/maps/centromeres.csv'.format(args.dir))
+    centromere_intervals=centromeres.loc[centromeres['chrom'] == str(args.chromosome),["start","end"]].values
+    # get chromosome length
+    # from https://www.ncbi.nlm.nih.gov/grc/human/data?asm=GRCh37
+    chromosome_length=pd.read_csv('{}/maps/GRCh37_chromosome_length.csv'.format(args.dir))
+    assembly_len=chromosome_length.loc[chromosome_length['chrom'] == str(args.chromosome),["length_bp"]].values
     # sequence_length from map file
     len =  map.right.max()
 
-    print('pedigree: {}, chromosome: {}, length: {}, mutation_rate: {}'.format(
-          args.pedigree_name, args.chromosome, len, args.mut_rate))
+    print('pedigree: {}, chromosome: {}, length: {}, mutation_rate: {}, censor: {}'.format(
+          args.pedigree_name, args.chromosome, len, args.mut_rate, args.censor))
 
     # run genome simulations
     ts = pedigree_tools.simulate_genomes_with_known_pedigree(
          text_pedigree = txt_ped,
          demography = ooa_2T12,
-         model = 'hudson',        # model to recapitulate tree
-         f_pop = 'EUR',           # population id of founders
-         p_pop = 'EUR',           # population id in pedigree
+         model = 'hudson',
          mutation_rate = args.mut_rate,
          rate_map = map,
          sequence_length = len,
+         sequence_length_from_assembly = assembly_len,
+         centromere_intervals = centromere_intervals,
+         censor = args.censor,
          seed = args.chromosome + args.seed_offset
          )
 
@@ -49,8 +56,7 @@ def main(args):
            args.out, args.pedigree_name, args.chromosome, args.suffix)
     ts.dump(out)
 
-    print('output: {}/{}_{}_{}.ts'.format(
-           args.out, args.pedigree_name, args.chromosome, args.suffix))
+    print('output: ', out)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
@@ -69,9 +75,13 @@ if __name__ == "__main__":
         default="sim",
         help="output file suffix"
         )
+    parser.add_argument("-censor", "--censor",
+        default=True,
+        help="removes pedigree information from tree sequence"
+        )
     parser.add_argument("-chr", "--chromosome",
         type=int,
-        help="chromosome number to be simulated"
+        help="specify chromosome number to be simulated"
         )
     parser.add_argument("-m", "--mut_rate",
         default=3.62e-8,
@@ -81,7 +91,7 @@ if __name__ == "__main__":
     parser.add_argument("-seed", "--seed_offset",
         default=0,
         type=int,
-        help="to change random seed"
+        help="specify random seed"
         )
     args = parser.parse_args()
 

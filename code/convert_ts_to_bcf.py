@@ -29,6 +29,7 @@ def ts_to_bcf_single(
     out_file,
     runner,
     af_cutoff=0,
+    contig_id=1,
     remove_singletons=False,
     use_vcf=False,
 ):
@@ -70,10 +71,14 @@ def ts_to_bcf_single(
                 assert ind.nodes[1] in sample_nodes
                 sample_individuals.append(ind)
 
-        sample_names = [
-            str(ind.metadata["individual_name"]) for ind in sample_individuals
-        ]
         sample_ids = [ind.id for ind in sample_individuals]
+
+        if 'individual_name' in ts.individual(0).metadata :
+            sample_names = [
+                str(ind.metadata["individual_name"]) for ind in sample_individuals
+                ]
+        else:
+            sample_names = [str(n) for n in sample_ids]
 
         read_fd, write_fd = os.pipe()
         write_pipe = os.fdopen(write_fd, "w")
@@ -83,7 +88,10 @@ def ts_to_bcf_single(
                 ["bcftools", "view", "-O", output_format], stdin=read_fd, stdout=f
             )
             ts.write_vcf(
-                write_pipe, individuals=sample_ids, individual_names=sample_names
+                write_pipe,
+                individuals=sample_ids,
+                individual_names=sample_names,
+                contig_id=contig_id
             )
             write_pipe.close()
             os.close(read_fd)
@@ -103,6 +111,7 @@ def main(args):
         out_bcf_file,
         runner,
         af_cutoff=args.af_cutoff,
+        contig_id=args.contig_id,
         remove_singletons=args.remove_singletons,
         use_vcf=args.use_vcf,
         )
@@ -120,6 +129,11 @@ if __name__ == "__main__":
         "--out_dir",
         required=True,
         help="output directory")
+    parser.add_argument(
+        "-c",
+        "--contig_id",
+        required=True,
+        help="contig id (chromosome name)")
     parser.add_argument(
         "-n",
         "--file_name",

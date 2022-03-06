@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --account=ctb-sgravel
 #SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=8GB
-#SBATCH --time=12:00:00
+#SBATCH --mem-per-cpu=128GB
+#SBATCH --time=24:00:00
 #SBATCH --array=1-22
 #SBATCH --output=log/%x-%A_%a.out
 #SBATCH --mail-user=luke.anderson.trocme@gmail.com
@@ -29,8 +29,9 @@ echo "Job started at: `date`"
 srun python $dir/code/convert_ts_to_bcf.py \
 -i $ts_path/${file_name}.ts \
 -o $temp_dir \
+-c $chromosome \
 -n $file_name \
--f 0.01
+-f 0.05
 
 mv $temp_dir/${file_name}.bcf $bcf_path/
 

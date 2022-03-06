@@ -9,7 +9,7 @@ def load_and_verify_pedigree(fname):
 
     Input:
     fname: string giving location of txt_ped-formatted genealogy.
-    columns represent:  ind, mother, father, generation
+    columns represent:  ind, mother, father, generation (lon, lat are optional)
 
     This function:
     checks if file exists,
@@ -56,7 +56,18 @@ def add_individuals_to_pedigree(pb, text_pedigree, f_pop, p_pop):
     """
     # dictionaries linking text_pedigree ids to msprime ids
     txt_ped_to_tskit_key = {}
-    #tskit_to_txt_ped_key = {}
+
+    # determine if lon lat present in text pedigree
+    if {'lon', 'lat'}.issubset(text_pedigree.columns):
+        geo = True
+    else :
+        geo = False
+
+    # determine if marriage date present in text pedigree
+    if {'datem'}.issubset(text_pedigree.columns):
+        date = True
+    else :
+        date = False
 
     # for each individual in the genealogy
     for i in text_pedigree.index:
@@ -91,26 +102,93 @@ def add_individuals_to_pedigree(pb, text_pedigree, f_pop, p_pop):
                 print("mother key missing, check order of dictionary construction")
                 raise
 
-        # add individual
-        child = pb.add_individual(time=ind_time,
-                                  parents=[mother,father],
-                                  population=p_pop,
-                                  metadata={"individual_name": str(ind_id)})
+        if geo and date :
+            lat = text_pedigree["lat"][i]
+            lon = text_pedigree["lon"][i]
+            date = text_pedigree["datem"][i]
+            # add individual
+            child = pb.add_individual(time=ind_time,
+                                      parents=[mother,father],
+                                      population=p_pop,
+                                      metadata={"individual_name": str(ind_id),
+                                                "geo_coord":[lat,lon],
+                                                "date":str(date)})
+        elif geo :
+            lat = text_pedigree["lat"][i]
+            lon = text_pedigree["lon"][i]
+            # add individual
+            child = pb.add_individual(time=ind_time,
+                                      parents=[mother,father],
+                                      population=p_pop,
+                                      metadata={"individual_name": str(ind_id),
+                                                "geo_coord":[lat,lon]})
+
+        elif date :
+            lon = text_pedigree["lon"][i]
+            lat = text_pedigree["lat"][i]
+            # add individual
+            child = pb.add_individual(time=ind_time,
+                                      parents=[mother,father],
+                                      population=p_pop,
+                                      metadata={"individual_name": str(ind_id),
+                                                "date":str(date)})
+        else:
+            # add individual
+            child = pb.add_individual(time=ind_time,
+                                      parents=[mother,father],
+                                      population=p_pop,
+                                      metadata={"individual_name": str(ind_id)})
         # update dictionary for downstream
         txt_ped_to_tskit_key[ind_id] = child # store for later use (?)
-        # tskit_to_txt_ped_key[child] = ind_id
 
     return pb
+
+def del_individual_name(md):
+    del md["individual_name"]
+    return md
+
+def censor_pedigree(ts):
+    """
+    Output: a censored tree sequence (i.e. without parent-child links or IDs)
+
+    Input:
+    ts: a tree sequence
+
+    This function:
+    removes all sensitive metadata from the input text pedigree
+    specifically, it removes:
+    - individual_names
+    - parents of each individual
+    """
+
+    tables = ts.dump_tables()
+
+    new_metadata = [del_individual_name(i.metadata) for i in tables.individuals]
+
+    validated_metadata = [
+        tables.individuals.metadata_schema.validate_and_encode_row(row) for row in new_metadata
+    ]
+    tables.individuals.packset_metadata(validated_metadata)
+
+    # remove parents
+    tables.individuals.packset_parents([[]] * tables.individuals.num_rows)
+
+    censored_ts = tables.tree_sequence()
+
+    return(censored_ts)
 
 def simulate_genomes_with_known_pedigree(
                                          text_pedigree,
                                          demography,
                                          model = "hudson",        # model to recapitulate tree
-                                         f_pop = "CEU",           # population id of founders
-                                         p_pop = 0,               # population id in pedigree
-                                         mutation_rate = 2.36e-8, # from Gutenkunst 2009
+                                         f_pop = "EUR",           # population id of founders
+                                         p_pop = "EUR",           # population id in pedigree
+                                         mutation_rate = 3.62e-8,
                                          rate_map = 1.20e-8,
                                          sequence_length = 1,
+                                         sequence_length_from_assembly = 1,
+                                         centromere_intervals = [0,0],
+                                         censor = True,
                                          seed = 123
                                          ):
     """
@@ -123,6 +201,7 @@ def simulate_genomes_with_known_pedigree(
     f_pop: population id of founders
     p_pop: population id in pedigree
     sequence_length: genome length of tree sequence
+    sequence_length_from_assembly: length including telomeres
     rate_map: recombination rate map defined by load_rate_map
     mtuation_rate: mutation rate used for dropping mutations down tree sequence
     seed: random seed used in simulations
@@ -168,6 +247,14 @@ def simulate_genomes_with_known_pedigree(
               random_seed = seed + 300
               )
 
+    if(censor): ts = censor_pedigree(ts)
+
+    # remove centromere
+    ts = ts.delete_intervals(intervals = centromere_intervals)
+    # modify sequence length to include `right` telomere
+    tables = ts.dump_tables()
+    tables.sequence_length = sequence_length_from_assembly
+    ts = tables.tree_sequence()
     return ts
 
 def simulation_sanity_checks(ts, ped):
