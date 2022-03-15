@@ -1,13 +1,10 @@
-
-
-       ___         _ _                       __ _                 _       _             
-      / _ \___  __| (_) __ _ _ __ ___  ___  / _(_)_ __ ___  _   _| | __ _| |_ ___  _ __ 
-     / /_)/ _ \/ _` | |/ _` | '__/ _ \/ _ \ \ \| | '_ ` _ \| | | | |/ _` | __/ _ \| '__|
-    / ___|  __| (_| | | (_| | | |  __|  __/ _\ | | | | | | | |_| | | (_| | || (_) | |   
-    \/    \___|\__,_|_|\__, |_|  \___|\___| \__|_|_| |_| |_|\__,_|_|\__,_|\__\___/|_|   
-                       |___/                                                            
-
-                                                                                                                                                                                                                   
+       ___                                  __ _                 _       _             
+      / _ \___ _ __   ___  _ __ ___   ___  / _(_)_ __ ___  _   _| | __ _| |_ ___  _ __ 
+     / /_\/ _ | '_ \ / _ \| '_ ` _ \ / _ \ \ \| | '_ ` _ \| | | | |/ _` | __/ _ \| '__|
+    / /_\|  __| | | | (_) | | | | | |  __/ _\ | | | | | | | |_| | | (_| | || (_) | |   
+    \____/\___|_| |_|\___/|_| |_| |_|\___| \__|_|_| |_| |_|\__,_|_|\__,_|\__\___/|_|   
+                                                                                   
+                                                                                                                                                                                                                  
 # Pedigree aware genome simulations
 
 This repository contains scripts that run msprime genome simulations based on a input text pedigree. `tskit` and `msprime` provide extensive [documentation](https://tskit.dev/msprime/docs/latest/api.html#msprime.sim_ancestry) about these simulations. New to this? A good starting point is the msprime [introduction](https://tskit.dev/msprime/docs/stable/intro.html). 
