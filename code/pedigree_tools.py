@@ -69,6 +69,18 @@ def add_individuals_to_pedigree(pb, text_pedigree, f_pop, p_pop):
     else :
         date = False
 
+    # determine if marriage decade present in text pedigree
+    if {'decade'}.issubset(text_pedigree.columns):
+        decade = True
+    else :
+        decade = False
+
+    # determine if new id is present in text pedigree
+    if {'new_id'}.issubset(text_pedigree.columns):
+        new_id = True
+    else :
+        new_id = False
+
     # for each individual in the genealogy
     for i in text_pedigree.index:
         # relevant information to load into PedigreeBuilder
@@ -102,42 +114,37 @@ def add_individuals_to_pedigree(pb, text_pedigree, f_pop, p_pop):
                 print("mother key missing, check order of dictionary construction")
                 raise
 
-        if geo and date :
-            lat = text_pedigree["lat"][i]
-            lon = text_pedigree["lon"][i]
-            date = text_pedigree["datem"][i]
-            # add individual
-            child = pb.add_individual(time=ind_time,
-                                      parents=[mother,father],
-                                      population=p_pop,
-                                      metadata={"individual_name": str(ind_id),
-                                                "geo_coord":[lat,lon],
-                                                "date":str(date)})
-        elif geo :
-            lat = text_pedigree["lat"][i]
-            lon = text_pedigree["lon"][i]
-            # add individual
-            child = pb.add_individual(time=ind_time,
-                                      parents=[mother,father],
-                                      population=p_pop,
-                                      metadata={"individual_name": str(ind_id),
-                                                "geo_coord":[lat,lon]})
+        if geo and date and decade and new_id :
+            metadata={"individual_name": str(ind_id),
+                      "geo_coord":[text_pedigree["lat"][i],text_pedigree["lon"][i]],
+                      "date":str(text_pedigree["datem"][i]),
+                      "decade":str(text_pedigree["decade"][i]),
+                      "new_id":str(text_pedigree["new_id"][i]),
+                      }
+        elif geo and date and new_id :
+            metadata={"individual_name": str(ind_id),
+                      "geo_coord":[text_pedigree["lat"][i],text_pedigree["lon"][i]],
+                      "date":str(text_pedigree["datem"][i]),
+                      "new_id":str(text_pedigree["new_id"][i]),
+                      }
+        elif geo and decade and new_id :
+            metadata={"individual_name": str(ind_id),
+                      "geo_coord":[text_pedigree["lat"][i],text_pedigree["lon"][i]],
+                      "decade":str(text_pedigree["decade"][i]),
+                      "new_id":str(text_pedigree["new_id"][i]),
+                      }
+        elif new_id :
+            metadata={"individual_name": str(ind_id),
+                      "new_id":str(text_pedigree["new_id"][i]),
+                      }
+        else :
+            metadata={"individual_name": str(ind_id)}
+        # add individual
+        child = pb.add_individual(time=ind_time,
+                                  parents=[mother,father],
+                                  population=p_pop,
+                                  metadata=metadata)
 
-        elif date :
-            lon = text_pedigree["lon"][i]
-            lat = text_pedigree["lat"][i]
-            # add individual
-            child = pb.add_individual(time=ind_time,
-                                      parents=[mother,father],
-                                      population=p_pop,
-                                      metadata={"individual_name": str(ind_id),
-                                                "date":str(date)})
-        else:
-            # add individual
-            child = pb.add_individual(time=ind_time,
-                                      parents=[mother,father],
-                                      population=p_pop,
-                                      metadata={"individual_name": str(ind_id)})
         # update dictionary for downstream
         txt_ped_to_tskit_key[ind_id] = child # store for later use (?)
 
@@ -176,6 +183,37 @@ def censor_pedigree(ts):
     censored_ts = tables.tree_sequence()
 
     return(censored_ts)
+
+def clean_pedigree_for_publication(ts):
+    """
+    Output: a cleaned tree sequence file (i.e. clean metadata, provenances, etc.)
+
+    Input:
+    ts: a tree sequence
+
+    This function:
+    removes useless metadata and provenances from the input tree sequence
+    specifically:
+    - sets geographical coordinates to `location`
+    - only keeps the first two provenance entries
+    - only keeps metadata cleared for publication
+    """
+    # load tables
+    tables = ts.dump_tables()
+    # only keep first two entries of provenances
+    tables.provenances.truncate(2)
+    # get the lat and lon for each individual
+    location = np.array(list(ind.metadata["geo_coord"] for ind in ts.individuals()))
+    # set the location to lat/lon
+    tables.individuals.set_columns(
+            flags=tables.individuals.flags,
+            location=location.reshape(2 * n),
+            location_offset=2 * np.arange(n + 1, dtype=np.uint64),
+            metadata=tables.individuals.metadata,
+            metadata_offset=tables.individuals.metadata_offset)
+
+    clean_ts = tables.tree_sequence()
+    return(clean_ts)
 
 def simulate_genomes_with_known_pedigree(
                                          text_pedigree,
@@ -272,4 +310,59 @@ def simulation_sanity_checks(ts, ped):
     # TODO : assert samples IDs are the correctly stored
     #ts.tables.individuals[5].metadata['individual_name']
 
+    pass
+
+
+def drop_mutations_again(
+                         ts,
+                         inside_mut = 2.36e-8,
+                         outside_mut = 3.62e-8,
+                         seed = args.seed_offset,
+                         ):
+    """
+    Output: tree sequence with a new set of mutations
+
+    Input:
+    ts: a tree sequence
+    inside_mut: mutation rate used _inside_ fixed pedigree
+    outside_mut: mutation rate use _outside_ fixed pedigree
+
+    NOTE: outisde_mut should match the one used in the demographic model.
+
+    This function:
+    removes all sites and mutations from the input tree sequence
+    drops mutations down tree using provided the two mutation rates
+    the optional seed argument can be used to generate new simulations
+    """
+
+    # load tables
+    tables = ts.dump_tables()
+    # remove sites
+    tables.sites.clear()
+    # remove mutations
+    tables.mutations.clear()
+    # turn this back into a tree sequence
+    ts_nomuts = tables.tree_sequence()
+
+    # cut tree seuquence into two based on start_time and end_time
+    # ts_nomuts_inside =
+    # ts_nomuts_outside =
+
+    # drop mutations down the tree
+    ts_inside = msprime.sim_mutations(
+              ts_nomuts_inside,
+              rate = inside_mut,
+              random_seed = seed
+              )
+
+    # drop mutations down the tree
+    ts_outside = msprime.sim_mutations(
+              ts_nomuts_outside,
+              rate = outside_mut,
+              random_seed = seed
+              )
+
+    # ts_out = ts_inside + ts_outside
+
+    #return(ts)
     pass

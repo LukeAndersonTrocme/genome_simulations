@@ -2,15 +2,15 @@
 #SBATCH --account=ctb-sgravel
 #SBATCH --cpus-per-task=1
 #SBATCH --mem-per-cpu=1GB
-#SBATCH --time=72:00:00
+#SBATCH --time=6-00:00:00
 #SBATCH --output=log/%x-%j.out
 
 # scheduling all jobs related to genome simulations
 
-time_stamp=$(date +"%F_%H-%M")
+time_stamp=$(date +"%F")
 dir="/home/luke1111/projects/ctb-sgravel/luke1111/simulated_genomes/"
 p="${dir}/code"
-ped_name="total_ascending_pedigree"
+ped_name="total_ascending_pedigree_space_time_new_id"
 suffix="sim"
 
 path=${dir}${ped_name}_${suffix}_${time_stamp}

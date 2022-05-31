@@ -30,6 +30,7 @@ def ts_to_bcf_single(
     runner,
     af_cutoff=0,
     contig_id=1,
+    keep_sample_id=True,
     remove_singletons=False,
     use_vcf=False,
 ):
@@ -73,12 +74,18 @@ def ts_to_bcf_single(
 
         sample_ids = [ind.id for ind in sample_individuals]
 
-        if 'individual_name' in ts.individual(0).metadata :
+        if keep_sample_id :
             sample_names = [
                 str(ind.metadata["individual_name"]) for ind in sample_individuals
                 ]
         else:
-            sample_names = [str(n) for n in sample_ids]
+            try:
+                sample_names = [
+                    str(ind.metadata["new_id"]) for ind in sample_individuals
+                    ]
+            except ValueError:
+                print("ValueError: reverting to sample_names = [str(n) for n in sample_ids]")
+                sample_names = [str(n) for n in sample_ids]
 
         read_fd, write_fd = os.pipe()
         write_pipe = os.fdopen(write_fd, "w")
@@ -110,6 +117,7 @@ def main(args):
         args.ts_file,
         out_bcf_file,
         runner,
+        keep_sample_id=args.keep_sample_id,
         af_cutoff=args.af_cutoff,
         contig_id=args.contig_id,
         remove_singletons=args.remove_singletons,
@@ -139,6 +147,12 @@ if __name__ == "__main__":
         "--file_name",
         required=True,
         help="output file name")
+    parser.add_argument(
+        "-rename",
+        "--keep_sample_id",
+        action="store_false",
+        help="Censor by renaming sample IDs. Default - False",
+    )
     parser.add_argument(
         "-f",
         "--af_cutoff",

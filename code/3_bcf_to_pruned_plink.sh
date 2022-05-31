@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --account=ctb-sgravel
 #SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=64GB
-#SBATCH --time=09:00:00
+#SBATCH --mem-per-cpu=32GB
+#SBATCH --time=04:00:00
 #SBATCH --array=1-22
 #SBATCH --output=log/%x-%A_%a.out
 
@@ -15,22 +15,22 @@ file_name=${3}_${chromosome}_${4}
 af_cutoff=0.05
 window_size=1000
 step_size=100
-r_squared=0.25 #0.05
+r_squared=0.4 #0.05
 #king_cutoff=0.0884
 mask_file="$HOME/projects/ctb-sgravel/luke1111/simulated_genomes/maps/20140520.strict_mask.autosomes.bed"
 
 echo "Job started at: `date`"
 
 # load software and environments
-module load plink/1.9b_6.21-x86_64
+#module load plink/1.9b_6.21-x86_64
 
 # make a bed/bim/fam file
-srun plink \
---bcf $bcf_path/${file_name}.bcf \
---maf $af_cutoff \
---extract range $mask_file \
---make-bed \
---out $plink_path/${file_name}
+#srun plink \
+#--bcf $bcf_path/${file_name}.bcf \
+#--maf $af_cutoff \
+#--extract range $mask_file \
+#--make-bed \
+#--out $plink_path/${file_name}
 
 # load software
 module load plink/2.00-10252019-avx2

@@ -76,7 +76,7 @@ if __name__ == "__main__":
         help="output file suffix"
         )
     parser.add_argument("-censor", "--censor",
-        default=True,
+        action="store_true",
         help="removes pedigree information from tree sequence"
         )
     parser.add_argument("-chr", "--chromosome",
