@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=ctb-sgravel
 #SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=32GB
-#SBATCH --time=04:00:00
-#SBATCH --array=1-22
+#SBATCH --mem-per-cpu=4GB
+#SBATCH --time=01:00:00
+#SBATCH --array=12-22
 #SBATCH --output=log/%x-%A_%a.out
 
 # set variables
@@ -22,15 +22,15 @@ mask_file="$HOME/projects/ctb-sgravel/luke1111/simulated_genomes/maps/20140520.s
 echo "Job started at: `date`"
 
 # load software and environments
-#module load plink/1.9b_6.21-x86_64
+module load plink/1.9b_6.21-x86_64
 
 # make a bed/bim/fam file
-#srun plink \
-#--bcf $bcf_path/${file_name}.bcf \
-#--maf $af_cutoff \
-#--extract range $mask_file \
-#--make-bed \
-#--out $plink_path/${file_name}
+srun plink \
+--bcf $bcf_path/${file_name}.bcf \
+--maf $af_cutoff \
+--extract range $mask_file \
+--make-bed \
+--out $plink_path/${file_name}
 
 # load software
 module load plink/2.00-10252019-avx2

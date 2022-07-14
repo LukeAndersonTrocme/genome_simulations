@@ -8,8 +8,8 @@
 
 # scheduling all jobs related to genome simulations
 
-time_stamp=$(date +"%F_%H:%M")
-dir="$HOME/projects/ctb-sgravel/shared_projects/simulation_p_value/simulated_genomes/"
+time_stamp=$(date +"%F")
+dir="$HOME/projects/def-sgravel/shared_projects/simulation_p_value/simulated_genomes/"
 p="${dir}/code"
 ped_name="lac_saint_jean_ascending_pedigree"
 suffix="sim"

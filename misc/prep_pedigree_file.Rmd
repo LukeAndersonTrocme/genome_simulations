@@ -37,7 +37,7 @@ cag_balsac_key <- data.table::fread("/Users/luke/Documents/Genizon/BALSAC/data_G
   dplyr::rename(ego_cag = PROJECT_CODE) %>% mutate(IID = as.character(file111))
 
 # king_cutoff
-king_cag <- fread("~/Documents/Genizon/Data/pca/4882_linked_IIDs_ld_king.king.cutoff.out.id")
+king_cag <- data.table::fread("~/Documents/Genizon/Data/pca/4882_linked_IIDs_ld_king.king.cutoff.out.id")
 ```
 
 # link genotyped individuals to pedigree

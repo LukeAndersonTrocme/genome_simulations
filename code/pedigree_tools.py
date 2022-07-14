@@ -150,8 +150,14 @@ def add_individuals_to_pedigree(pb, text_pedigree, f_pop, p_pop):
 
     return pb
 
-def del_individual_name(md):
-    del md["individual_name"]
+#def del_individual_name(md):
+#    del md["individual_name"]
+#    return md
+
+def del_sensitive_metadata(md):
+    del md["date"]
+    del md["new_id"]
+
     return md
 
 def censor_pedigree(ts):
@@ -170,7 +176,7 @@ def censor_pedigree(ts):
 
     tables = ts.dump_tables()
 
-    new_metadata = [del_individual_name(i.metadata) for i in tables.individuals]
+    new_metadata = [del_sensitive_metadata(i.metadata) for i in tables.individuals]
 
     validated_metadata = [
         tables.individuals.metadata_schema.validate_and_encode_row(row) for row in new_metadata
@@ -198,6 +204,9 @@ def clean_pedigree_for_publication(ts):
     - only keeps the first two provenance entries
     - only keeps metadata cleared for publication
     """
+    # ensure pedigree is censored
+    ts = censor_pedigree(ts)
+
     # load tables
     tables = ts.dump_tables()
     # only keep first two entries of provenances

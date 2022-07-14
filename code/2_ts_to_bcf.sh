@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=ctb-sgravel
 #SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=100GB
-#SBATCH --time=4-00:00:00
-#SBATCH --array=1-2
+#SBATCH --mem-per-cpu=10GB
+#SBATCH --time=06:00:00
+#SBATCH --array=12-22
 #SBATCH --output=log/%x-%A_%a.out
 #SBATCH --mail-user=luke.anderson.trocme@gmail.com
 #SBATCH --mail-type=START,FAIL,END
@@ -31,7 +31,7 @@ srun python $dir/code/convert_ts_to_bcf.py \
 -o $temp_dir \
 -c $chromosome \
 -n $file_name \
--f 0.05
+-f 0.001
 
 mv $temp_dir/${file_name}.bcf $bcf_path/
 
