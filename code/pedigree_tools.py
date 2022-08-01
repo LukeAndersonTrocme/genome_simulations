@@ -213,6 +213,9 @@ def clean_pedigree_for_publication(ts):
     tables.provenances.truncate(2)
     # get the lat and lon for each individual
     location = np.array(list(ind.metadata["geo_coord"] for ind in ts.individuals()))
+
+    n = ts.num_individuals
+
     # set the location to lat/lon
     tables.individuals.set_columns(
             flags=tables.individuals.flags,
@@ -326,7 +329,7 @@ def drop_mutations_again(
                          ts,
                          inside_mut = 2.36e-8,
                          outside_mut = 3.62e-8,
-                         seed = args.seed_offset,
+                         seed = 0,
                          ):
     """
     Output: tree sequence with a new set of mutations
