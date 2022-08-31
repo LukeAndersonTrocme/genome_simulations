@@ -4,6 +4,7 @@ import sys
 import pandas as pd
 import numpy as np
 import msprime
+import tszip
 import demes
 import pedigree_tools
 
@@ -52,9 +53,10 @@ def main(args):
     pedigree_tools.simulation_sanity_checks(ts, txt_ped)
 
     # write output tree sequence
-    out = '{}/{}_{}_{}.ts'.format(
+    out = '{}/{}_{}_{}.tsz'.format(
            args.out, args.pedigree_name, args.chromosome, args.suffix)
-    ts.dump(out)
+
+    tszip.compress(ts, out)
 
     print('output: ', out)
 
