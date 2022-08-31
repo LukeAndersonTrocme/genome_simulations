@@ -20,7 +20,7 @@ ind,father,mother,sex
 10102,0,0,1
 10103,0,0,2
 ```
-([file](https://github.com/LukeAndersonTrocme/genome_simulations/blob/main/quick_start/pedigrees/sample_pedigree.csv))
+*text pedigree ([file](https://github.com/LukeAndersonTrocme/genome_simulations/blob/main/quick_start/pedigrees/sample_pedigree.csv))*
 
 
 In order to correctly build the msprime.[Pedigree](https://tskit.dev/msprime/docs/stable/pedigrees.html) object, we must include generation numbers to ensure that parents are added before their children. We use the [generate_ascending_sample_pedigree.R](https://github.com/LukeAndersonTrocme/genome_simulations/blob/main/quick_start/code/generate_ascending_sample_pedigree.R) script to identifies probands as individuals who do not have any children, and then ascend the pedigree starting from the probads while keeping track of the [maximum genealogical depth](https://github.com/LukeAndersonTrocme/genome_simulations/blob/main/code/R/maximum_genealogical_depth.R) for internal nodes.
@@ -31,7 +31,7 @@ ind,mother,father,generation
 408477,861890,861889,0
 408790,863184,863183,0
 ```
-([file](https://github.com/LukeAndersonTrocme/genome_simulations/blob/main/quick_start/pedigrees/ascending_sample_pedigree.txt))
+*text pedigree with generation time ([file](https://github.com/LukeAndersonTrocme/genome_simulations/blob/main/quick_start/pedigrees/ascending_sample_pedigree.txt))*
 
 
 ## Model parameters
@@ -103,8 +103,10 @@ print(ts)
 ║Sites      │221107│  5.3 MiB│          No║
 ╚═══════════╧══════╧═════════╧════════════╝
 ```
+*tree sequence ([file](https://github.com/LukeAndersonTrocme/genome_simulations/blob/main/quick_start/tree_sequences/ascending_sample_pedigree_22_sim.tsz))*
 
-A few tips: 
+
+### Tips: 
 - Simulate multiple chromosomes? Easy! Just specify `#SBATCH --array=1-22` to run all autosomes as separate jobs.
 - installed the proper [*requirements*](https://github.com/LukeAndersonTrocme/genome_simulations/blob/main/misc/pedsim_requirements.txt).
 - mirror the folder structure in the quick_start directory. In particular, make sure the 'maps' folder is in the same folder as the pedigree folder (e.g `path/to/pedigree/../maps/Tennessen_ooa_2T12.yaml`)
