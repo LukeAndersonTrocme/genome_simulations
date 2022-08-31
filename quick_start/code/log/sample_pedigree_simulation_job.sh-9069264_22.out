@@ -1,0 +1,4 @@
+Job started at: Tue Aug 30 14:39:36 EDT 2022
+pedigree: ascending_sample_pedigree, chromosome: 22, length: 51229805.0, mutation_rate: 3.62e-08, censor: False
+output:  /home/luke1111/projects/ctb-sgravel/luke1111/quick_start/tree_sequences//ascending_sample_pedigree_22_sim.ts
+Job finished with exit code 0 at: Tue Aug 30 14:40:34 EDT 2022

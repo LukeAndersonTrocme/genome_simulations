@@ -1,0 +1,22 @@
+---
+title: "R Notebook"
+output: html_notebook
+---
+
+
+
+```{r}
+library(data.table)
+library(dplyr)
+
+df <- fread("/Users/luke/Documents/genome_simulations/misc/watershed_locations_feb2022.csv")
+
+df %>%
+  select(Lon,Lat,resid,t,a,min_wts_name,WSCSSDA) %>%
+  unique() %>%
+  write.csv(file = "/Users/luke/Documents/genome_simulations/misc/location_metadata.csv", row.names = F)
+
+```
+
+
+
