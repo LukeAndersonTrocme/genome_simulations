@@ -41,12 +41,12 @@ _demography beyond the input pedigree_: [Out of Africa model](https://tskit.dev/
 
 _model to recapitulate the tree_: [hudson](https://tskit.dev/msprime/docs/latest/ancestry.html#hudson-coalescent)
 
-_mutation rate_: 3.62e-8 from [Gravel et al., 2011](https://www.pnas.org/content/108/29/11983) ([stdpopsim](https://github.com/popsim-consortium/stdpopsim/blob/70bc680c41c3e64cc8bc0e2d2586403ac7a39d6b/stdpopsim/catalog/HomSap/demographic_models.py#L369))
+_mutation rate_: 3.62e-8 from [Gravel et al., 2011](https://www.pnas.org/content/108/29/11983) ([stdpopsim](https://github.com/popsim-consortium/stdpopsim/blob/70bc680c41c3e64cc8bc0e2d2586403ac7a39d6b/stdpopsim/catalog/HomSap/demographic_models.py#L369)) (Note: This unusually high mutation rate is chosen to match the mutation rate while accounting for the difference in diversity between coding and non-coding sequences. See paper for details)
 
 _recombination map_: [HapmapII_GRCh37](https://popsim-consortium.github.io/stdpopsim-docs/stable/index.html) ([download](https://stdpopsim.s3-us-west-2.amazonaws.com/genetic_maps/HomSap/HapmapII_GRCh37_RecombinationHotspots.tar.gz))
 
 ## Computational requirements
-This software can run on a local machine, but given the large computational resource requirements of population scale genome simulations, we used the [Compute Canada cluster](https://docs.computecanada.ca/).
+This software can run on a local machine for smaller sized pedigrees, but for our paper, we used the [Compute Canada cluster](https://docs.computecanada.ca/) given the large computational resource requirements of population scale genome simulations.
 
 
 ## Driver Script
