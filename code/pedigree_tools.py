@@ -63,11 +63,11 @@ def add_individuals_to_pedigree(pb, text_pedigree, f_pop, p_pop):
     else :
         geo = False
 
-    # determine if marriage date present in text pedigree
-    if {'datem'}.issubset(text_pedigree.columns):
-        date = True
+    # determine if marriage loc present in text pedigree
+    if {'lieum'}.issubset(text_pedigree.columns):
+        loc = True
     else :
-        date = False
+        loc = False
 
     # determine if marriage decade present in text pedigree
     if {'decade'}.issubset(text_pedigree.columns):
@@ -76,10 +76,10 @@ def add_individuals_to_pedigree(pb, text_pedigree, f_pop, p_pop):
         decade = False
 
     # determine if new id is present in text pedigree
-    if {'new_id'}.issubset(text_pedigree.columns):
-        new_id = True
+    if {'sex'}.issubset(text_pedigree.columns):
+        sex = True
     else :
-        new_id = False
+        sex = False
 
     # for each individual in the genealogy
     for i in text_pedigree.index:
@@ -114,28 +114,28 @@ def add_individuals_to_pedigree(pb, text_pedigree, f_pop, p_pop):
                 print("mother key missing, check order of dictionary construction")
                 raise
 
-        if geo and date and decade and new_id :
+        if geo and loc and decade and sex :
             metadata={"individual_name": str(ind_id),
                       "geo_coord":[text_pedigree["lat"][i],text_pedigree["lon"][i]],
-                      "date":str(text_pedigree["datem"][i]),
+                      "loc":str(text_pedigree["lieum"][i]),
                       "decade":str(text_pedigree["decade"][i]),
-                      "new_id":str(text_pedigree["new_id"][i]),
+                      "sex":str(text_pedigree["sex"][i]),
                       }
-        elif geo and date and new_id :
+        elif geo and loc and sex :
             metadata={"individual_name": str(ind_id),
                       "geo_coord":[text_pedigree["lat"][i],text_pedigree["lon"][i]],
-                      "date":str(text_pedigree["datem"][i]),
-                      "new_id":str(text_pedigree["new_id"][i]),
+                      "loc":str(text_pedigree["lieum"][i]),
+                      "sex":str(text_pedigree["sex"][i]),
                       }
-        elif geo and decade and new_id :
+        elif geo and decade and sex :
             metadata={"individual_name": str(ind_id),
                       "geo_coord":[text_pedigree["lat"][i],text_pedigree["lon"][i]],
                       "decade":str(text_pedigree["decade"][i]),
-                      "new_id":str(text_pedigree["new_id"][i]),
+                      "sex":str(text_pedigree["sex"][i]),
                       }
-        elif new_id :
+        elif sex :
             metadata={"individual_name": str(ind_id),
-                      "new_id":str(text_pedigree["new_id"][i]),
+                      "sex":str(text_pedigree["sex"][i]),
                       }
         else :
             metadata={"individual_name": str(ind_id)}

@@ -15,7 +15,7 @@ def main(args):
 
     # Two population out-of-Africa
     # demography model from Tennessen et al., 2012
-    yaml_file = '{}/code/Tennessen_ooa_2T12.yaml'.format(args.dir)
+    yaml_file = '{}/code/Tennessen_ooa_2T12_rescale.yaml'.format(args.dir)
     graph = demes.load(yaml_file)
     ooa_2T12 = msprime.Demography.from_demes(graph)
     # define recombination map file name from stdpopsim
@@ -84,7 +84,7 @@ if __name__ == "__main__":
         help="specify chromosome number to be simulated"
         )
     parser.add_argument("-m", "--mut_rate",
-        default=3.62e-8,
+        default=1.66e-8,
         type=float,
         help="specify mutation rate"
         )

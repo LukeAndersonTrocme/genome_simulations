@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=4
 #SBATCH --mem-per-cpu=4GB
 #SBATCH --time=01:00:00
-#SBATCH --array=12-22
+#SBATCH --array=1-22
 #SBATCH --output=log/%x-%A_%a.out
 
 # set variables

@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH --account=ctb-sgravel
 #SBATCH --cpus-per-task=1
-#SBATCH --mem-per-cpu=1GB
-#SBATCH --time=06:00:00
+#SBATCH --mem-per-cpu=100MB
+#SBATCH --time=6-00:00:00
 #SBATCH --output=log/%x-%j.out
 
 # scheduling all jobs related to genome simulations
@@ -10,7 +10,7 @@
 time_stamp=$(date +"%F")
 dir="/home/luke1111/projects/ctb-sgravel/luke1111/simulated_genomes/"
 p="${dir}/code"
-ped_name="SLSJ_CVX_recode_pedigree_12"
+ped_name="revised_ascending_pedigree"
 suffix="sim"
 
 path=${dir}${ped_name}_${suffix}_${time_stamp}

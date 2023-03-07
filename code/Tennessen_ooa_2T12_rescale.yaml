@@ -1,0 +1,37 @@
+description: The Tennessen et al. 2012 OOA model (scaled w/ alpha=3.62/1.66).
+doi:
+- https://doi.org/10.1126/science.1219240
+time_units: years
+generation_time: 25
+
+demes:
+- name: ancestral
+  description: Equilibrium/root population
+  epochs:
+  - {end_time: 322747, start_size: 15941}
+- name: AMH
+  description: Anatomically modern humans
+  ancestors: [ancestral]
+  epochs:
+  - {end_time: 111217, start_size: 31564}
+- name: OOA
+  description: Bottleneck out-of-Africa population
+  ancestors: [AMH]
+  epochs:
+  - {end_time: 50157, start_size: 4058}
+- name: AFR
+  description: African Americans
+  ancestors: [AMH]
+  epochs:
+  - {end_time: 11154, start_size: 31564}
+  - {start_size: 31564, end_size: 942345}
+- name: EUR
+  description: European Americans
+  ancestors: [OOA]
+  epochs:
+  - {end_time: 11154, start_size: 2251, end_size: 20235}
+  - {start_size: 20235, end_size: 1093493}
+
+migrations:
+- {demes: [AFR, OOA], rate: 6.88e-05}
+- {demes: [AFR, EUR], rate: 1.15e-05}

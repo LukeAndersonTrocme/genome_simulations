@@ -1,9 +1,9 @@
 #!/bin/bash
 #SBATCH --account=ctb-sgravel
 #SBATCH --cpus-per-task=4
-#SBATCH --mem-per-cpu=10GB
-#SBATCH --time=06:00:00
-#SBATCH --array=12-22
+#SBATCH --mem-per-cpu=16GB
+#SBATCH --time=2-06:00:00
+#SBATCH --array=1-22
 #SBATCH --output=log/%x-%A_%a.out
 #SBATCH --mail-user=luke.anderson.trocme@gmail.com
 #SBATCH --mail-type=START,FAIL,END
